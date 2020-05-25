@@ -1,6 +1,5 @@
 class ZCL_IMAGE definition
   public
-  final
   create public .
 
 public section.
