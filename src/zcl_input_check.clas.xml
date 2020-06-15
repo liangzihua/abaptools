@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_INPUT_CHECK</CLSNAME>
+    <LANGU>1</LANGU>
+    <DESCRIPT>接口入参检查</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <MSG_ID>ZBC</MSG_ID>
+   </VSEOCLASS>
+   <TPOOL>
+    <item>
+     <ID>I</ID>
+     <KEY>001</KEY>
+     <ENTRY>不能为空</ENTRY>
+     <LENGTH>14</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>002</KEY>
+     <ENTRY>字段不存在</ENTRY>
+     <LENGTH>15</LENGTH>
+    </item>
+   </TPOOL>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_INPUT_CHECK</CLSNAME>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <LANGU>1</LANGU>
+     <DESCRIPT>CONSTRUCTOR</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_INPUT_CHECK</CLSNAME>
+     <CMPNAME>DFIES</CMPNAME>
+     <LANGU>1</LANGU>
+     <DESCRIPT>DD 接口: DDIF_FIELDINFO_GET 的表字段</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_INPUT_CHECK</CLSNAME>
+     <CMPNAME>DFIES_TAB</CMPNAME>
+     <LANGU>1</LANGU>
+     <DESCRIPT>结构DFIES的表类型</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_INPUT_CHECK</CLSNAME>
+     <CMPNAME>REQUERIED_CHECK</CMPNAME>
+     <LANGU>1</LANGU>
+     <DESCRIPT>必输字段检查</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>
