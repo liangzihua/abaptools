@@ -4,9 +4,9 @@ class ZCL_IMAGE definition
 
 public section.
 
-  data C_TYPE_APPL type CHAR20 value 'APPL' ##NO_TEXT.
-  data C_TYPE_LOCAL type CHAR20 value 'LOCAL' ##NO_TEXT.
-  data C_TYPE_URL type CHAR20 value 'URL' ##NO_TEXT.
+  class-data C_TYPE_APPL type CHAR20 value 'APPL' ##NO_TEXT.
+  constants C_TYPE_LOCAL type CHAR20 value 'LOCAL' ##NO_TEXT.
+  constants C_TYPE_DOCSERVER type CHAR20 value 'DOC_SERVER' ##NO_TEXT.
   constants FORMAT_BMP type STRING value 'image/x-ms-bmp' ##NO_TEXT.
   constants FORMAT_TIF type STRING value 'image/tiff' ##NO_TEXT.
   constants FORMAT_JPG type STRING value 'image/jpeg' ##NO_TEXT.
@@ -25,6 +25,7 @@ public section.
     importing
       !IV_FILENAME type STRING
       !IV_IMAGENAME type TDOBNAME default 'HRPHOTO'
+      !IV_TYPE type CHAR20 optional
     exceptions
       ERROR .
   PROTECTED SECTION.
@@ -33,11 +34,9 @@ private section.
   constants CLASSNAME type SBDST_CLASSNAME value 'DEVC_STXD_BITMAP' ##NO_TEXT.
   constants CLASSTYPE type SBDST_CLASSTYPE value 'OT' ##NO_TEXT.
 
-  methods GET_IMAGE_BY_URL
+  methods GET_IMAGE_FROM_DOCSERVER
     importing
       !URL type STRING
-      !USER type STRING optional
-      !PWD type STRING optional
     exporting
       !DATA type XSTRING
     exceptions
@@ -63,6 +62,11 @@ private section.
       !IV_IMAGENAME type TDOBNAME default 'HRPHOTO'
     exceptions
       ERROR .
+  class-methods TABLE_TO_XSTRING
+    importing
+      !DATA_TABLE type STANDARD TABLE
+    exporting
+      value(DATA_STRING) type XSTRING .
 ENDCLASS.
 
 
@@ -298,85 +302,6 @@ CLASS ZCL_IMAGE IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD get_image_by_url.
-
-    DATA: lob_http_client     TYPE REF TO if_http_client.
-    DATA: dummy TYPE string,
-          subrc TYPE sysubrc.
-
-
-    IF url IS INITIAL.
-      MESSAGE e000(sr) WITH 'Please provide URL' RAISING error.
-    ENDIF.
-
-    " Create an instance of the HTTP client:
-    CALL METHOD cl_http_client=>create_by_url
-      EXPORTING
-        url                = url
-      IMPORTING
-        client             = lob_http_client
-      EXCEPTIONS
-        argument_not_found = 1
-        plugin_not_active  = 2
-        internal_error     = 3
-        OTHERS             = 4.
-    IF sy-subrc <> 0.
-      MESSAGE e000(sr) WITH 'Create of client object failed' RAISING error.
-    ENDIF.
-
-    "authenticate
-    CALL METHOD lob_http_client->authenticate
-      EXPORTING
-        username = user
-        password = pwd
-        language = sy-langu.
-
-
-
-*    lob_http_client->request->set_method( 'GET' ).
-
-    CALL METHOD lob_http_client->send
-      EXPORTING
-        timeout                    = if_http_client=>co_timeout_default
-      EXCEPTIONS
-        http_communication_failure = 1
-        http_invalid_state         = 2
-        http_processing_failed     = 3
-        http_invalid_timeout       = 4
-        OTHERS                     = 5.
-    IF sy-subrc <> 0.
-
-      CALL METHOD lob_http_client->get_last_error
-        IMPORTING
-          code    = subrc
-          message = dummy.
-      MESSAGE e398(00) WITH TEXT-002 RAISING error.
-    ENDIF.
-
-
-    CALL METHOD lob_http_client->receive
-      EXCEPTIONS
-        http_communication_failure = 1
-        http_invalid_state         = 2
-        http_processing_failed     = 3
-        OTHERS                     = 4.
-    IF sy-subrc <> 0.
-
-      CALL METHOD lob_http_client->get_last_error
-        IMPORTING
-          code    = subrc
-          message = dummy.
-      MESSAGE e398(00) WITH TEXT-002 RAISING error.
-
-    ELSE.
-      data = lob_http_client->response->get_data( ).
-    ENDIF.
-
-    CALL METHOD lob_http_client->close.
-
-  ENDMETHOD.
-
-
   METHOD get_image_from_appl.
 
     TRY.
@@ -390,6 +315,116 @@ CLASS ZCL_IMAGE IMPLEMENTATION.
       CATCH cx_root INTO DATA(lox_root).
         MESSAGE e398(00) WITH lox_root->if_message~get_text( ) RAISING error.
     ENDTRY.
+
+  ENDMETHOD.
+
+
+  METHOD GET_IMAGE_FROM_DOCSERVER.
+
+    DATA: lob_http_client TYPE REF TO if_http_client,
+          lob_attachment  TYPE REF TO zcl_attachment,
+          lt_filename     TYPE zbc_tt_filetable,
+          ls_filename     TYPE zbc_s_filetable,
+          lt_file_return  TYPE zbc_tt_fdownload_return,
+          ls_file_return  TYPE zbc_s_fdownload_return.
+
+    DATA: dummy TYPE string,
+          subrc TYPE sysubrc.
+
+
+    IF url IS INITIAL.
+      MESSAGE e000(sr) WITH 'Please provide URL' RAISING error.
+    ENDIF.
+
+    IF lob_attachment IS INITIAL.
+      CREATE OBJECT lob_attachment.
+    ENDIF.
+
+    REFRESH: lt_filename.
+    CLEAR: ls_filename .
+    ls_filename-dockey = url.
+    APPEND ls_filename TO lt_filename.
+
+    CALL METHOD lob_attachment->file_download
+      EXPORTING
+        it_filename    = lt_filename
+        iv_direct_down = ''
+      RECEIVING
+        rt_return      = lt_file_return.
+
+    CLEAR: ls_file_return.
+    READ TABLE lt_file_return INTO ls_file_return INDEX 1.
+    IF ls_file_return-type = 'E'.
+      MESSAGE e000 WITH ls_file_return-message RAISING error.
+    ELSE.
+      data = ls_file_return-data.
+    ENDIF.
+
+*
+*    " Create an instance of the HTTP client:
+*    CALL METHOD cl_http_client=>create_by_url
+*      EXPORTING
+*        url                = url
+*      IMPORTING
+*        client             = lob_http_client
+*      EXCEPTIONS
+*        argument_not_found = 1
+*        plugin_not_active  = 2
+*        internal_error     = 3
+*        OTHERS             = 4.
+*    IF sy-subrc <> 0.
+*      MESSAGE e000(sr) WITH 'Create of client object failed' RAISING error.
+*    ENDIF.
+*
+*    "authenticate
+*    CALL METHOD lob_http_client->authenticate
+*      EXPORTING
+*        username = user
+*        password = pwd
+*        language = sy-langu.
+*
+*
+*
+**    lob_http_client->request->set_method( 'GET' ).
+*
+*    CALL METHOD lob_http_client->send
+*      EXPORTING
+*        timeout                    = if_http_client=>co_timeout_default
+*      EXCEPTIONS
+*        http_communication_failure = 1
+*        http_invalid_state         = 2
+*        http_processing_failed     = 3
+*        http_invalid_timeout       = 4
+*        OTHERS                     = 5.
+*    IF sy-subrc <> 0.
+*
+*      CALL METHOD lob_http_client->get_last_error
+*        IMPORTING
+*          code    = subrc
+*          message = dummy.
+*      MESSAGE e398(00) WITH TEXT-002 RAISING error.
+*    ENDIF.
+*
+*
+*    CALL METHOD lob_http_client->receive
+*      EXCEPTIONS
+*        http_communication_failure = 1
+*        http_invalid_state         = 2
+*        http_processing_failed     = 3
+*        OTHERS                     = 4.
+*    IF sy-subrc <> 0.
+*
+*      CALL METHOD lob_http_client->get_last_error
+*        IMPORTING
+*          code    = subrc
+*          message = dummy.
+*      MESSAGE e398(00) WITH TEXT-002 RAISING error.
+*
+*    ELSE.
+*      data = lob_http_client->response->get_data( ).
+*    ENDIF.
+*
+*    CALL METHOD lob_http_client->close.
 
   ENDMETHOD.
 
@@ -477,8 +512,22 @@ CLASS ZCL_IMAGE IMPLEMENTATION.
   ENDMETHOD.
 
 
+method TABLE_TO_XSTRING .
+  FIELD-SYMBOLS: <line> TYPE any,
+                 <XFS>  type any.
+
+  CLEAR data_string.
+  LOOP AT data_table ASSIGNING <line>.
+    assign <line> to <xfs> casting type x.
+    CONCATENATE data_string <xfs> INTO data_string IN BYTE MODE.
+  ENDLOOP.
+
+ENDMETHOD.
+
+
   METHOD upload_image.
     DATA: lv_filename         TYPE string,
+          lt_filename         TYPE TABLE OF string,
           lv_mimetype         TYPE string,
           lv_xstring          TYPE xstring,
           lt_blob             TYPE w3mimetabtype,
@@ -489,21 +538,25 @@ CLASS ZCL_IMAGE IMPLEMENTATION.
           lv_perfix           TYPE char10,
           lv_type             TYPE char10.
 
-    lv_filename =  iv_filename.
-    TRY.
-        lv_perfix = lv_filename+0(4).
-        TRANSLATE lv_perfix TO UPPER CASE.
 
-        IF lv_perfix = 'HTTP'.
-          lv_type  = c_type_url.
-        ELSE.
-          lv_type  = c_type_appl.
-        ENDIF.
+    lv_type     = iv_type.
+
+    SPLIT iv_filename AT ',' INTO TABLE lt_filename.
+    IF lt_filename[] IS NOT INITIAL.
+      READ TABLE lt_filename INTO lv_filename INDEX 1.
+    ELSE.
+      lv_filename = iv_filename.
+    ENDIF.
+
+    TRY.
+*        lv_perfix = lv_filename+0(4).
+*        TRANSLATE lv_perfix TO UPPER CASE.
 
         CASE lv_type .
-          WHEN c_type_url.
+          WHEN c_type_docserver.
             "下载网页图片,或者文档服务器的图片
-            CALL METHOD get_image_by_url
+
+            CALL METHOD get_image_from_docserver
               EXPORTING
                 url    = lv_filename
               IMPORTING
@@ -549,6 +602,25 @@ CLASS ZCL_IMAGE IMPLEMENTATION.
 
           WHEN c_type_local.
 
+            CALL METHOD get_image_from_local
+              EXPORTING
+                filename = iv_filename
+              IMPORTING
+                data     = lv_xstring
+              EXCEPTIONS
+                error    = 1
+                OTHERS   = 2.
+            IF sy-subrc <> 0.
+
+              MESSAGE ID sy-msgid
+                    TYPE sy-msgty
+                  NUMBER sy-msgno
+                    WITH sy-msgv1
+                         sy-msgv2
+                         sy-msgv3
+                         sy-msgv4
+                 RAISING error.
+            ENDIF.
           WHEN OTHERS.
         ENDCASE.
 

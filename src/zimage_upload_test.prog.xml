@@ -27,6 +27,18 @@
      <ENTRY>Image Upload Test</ENTRY>
      <LENGTH>17</LENGTH>
     </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_FILE</KEY>
+     <ENTRY>文件名</ENTRY>
+     <LENGTH>11</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_IMAGE</KEY>
+     <ENTRY>图片名称</ENTRY>
+     <LENGTH>12</LENGTH>
+    </item>
    </TPOOL>
   </asx:values>
  </asx:abap>
